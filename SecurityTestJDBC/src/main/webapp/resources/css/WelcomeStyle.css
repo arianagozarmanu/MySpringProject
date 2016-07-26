@@ -1,0 +1,51 @@
+#header {
+	background-color: #E9FFB8;
+	color: #231580;
+	text-align: center;
+	padding: 5px;
+	height: 130px;
+}
+
+table, th, td {
+	border: 1px solid #ddd;
+}
+
+table {
+	border-collapse: collapse;
+	width: 50%;
+}
+
+th, td {
+	padding: 15px;
+}
+
+th {
+	background-color: #4F0C8F;
+	color: white;
+	text-align: center;
+}
+
+a:link, a:visited {
+	color: #042085;
+	text-decoration: none;
+	cursor: hand;
+}
+
+a:link:active, a:visited:active {
+	color: #F75317;
+}
+
+div.container {
+	display: inline-block;
+}
+
+.button {
+    background-color: #4CAF50; /* Green */
+    border-radius: 5px;
+    color: white;
+    padding: 10px 15px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+}
