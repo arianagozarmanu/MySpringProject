@@ -5,7 +5,6 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -13,8 +12,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestWrapper;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.*;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -27,19 +24,12 @@ import service.*;
 
 @Controller
 public class HomeController {
-
-	@Autowired
-	private ProductDao productDaoImpl;
-
-	@Autowired
-	private UserDao userDaoImpl;
 	
 	@Autowired
 	private UserService userServiceImpl;
 	
 	@Autowired
-	private PlatformTransactionManager platformTransactionManager;
-	
+	private ProductService productServiceImpl;	
 	
 	// registration
 	@RequestMapping(value = "/registration", method = RequestMethod.GET)
@@ -57,13 +47,7 @@ public class HomeController {
 		ModelAndView model = new ModelAndView();
 		
 		if(result.getErrorCount() == 0 && usernameIsValid(user.getUsername()) && emailIsValid(user.getEmail()) && user.getAge()>0){
-			Set<Integer> usersIds = getUsersId(userDaoImpl.findAll());
-			System.out.println(usersIds.toArray()[usersIds.size()-1]);
-			user.setEnabled(true);
-			user.setIduders((int)usersIds.toArray()[usersIds.size()-1]+1);
-			user.setLastOperationDate(getCurrentDate());
-			userDaoImpl.add(user);
-			userDaoImpl.addRole(user.getUsername(),"ROLE_USER");
+			userServiceImpl.registerUser(user);
 			model.addObject("successRegisterMessage", "Your username and password were successfully registered!");
 			model.setViewName("login");
 		} else {
@@ -81,7 +65,7 @@ public class HomeController {
 	public ModelAndView updateProduct(@PathVariable("id") int id, Map<String, Object> m) {
 
 		ModelAndView model = new ModelAndView();
-		Product prod = productDaoImpl.findById(id);
+		Product prod = productServiceImpl.findProductById(id);
 		model.addObject("product", prod);
 
 		Product productForm = new Product();
@@ -94,10 +78,6 @@ public class HomeController {
 	@RequestMapping(value = "/welcome/update/doUpdate", method = RequestMethod.POST)
 	public ModelAndView doUpdate(@ModelAttribute("SpringWeb") Product product, BindingResult result,
 			RedirectAttributes redirectAttrs) {
-		//tranzactii stuff
-		DefaultTransactionDefinition defaultTransactionDefinition = new DefaultTransactionDefinition();
-		defaultTransactionDefinition.setName("updateNewProductAndDateAction");
-		TransactionStatus status = platformTransactionManager.getTransaction(defaultTransactionDefinition);
 		
 		ModelAndView model = new ModelAndView();
 		if (result.getErrorCount() > 0 || product.getPrice() < 0) {
@@ -106,19 +86,13 @@ public class HomeController {
 		} else {
 			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 			String name = authentication.getName();
-			User user = userDaoImpl.findByName(name);
-			java.util.Date date = getCurrentDate();
+			User user = userServiceImpl.findUserByName(name);
 			try {
-				userServiceImpl.insertLastActionDate(date, user.getIduders());
-				//userDaoImpl.insertLastActionDate(date, user.getIduders());
-				productDaoImpl.update(product);
-				//productDaoImpl.updateProductTransaction(product, date, user.getIduders());
+				productServiceImpl.updateProduct(product,user);
 				redirectAttrs.addFlashAttribute("successAddingProduct", "Your product was successfully updated!");
-				platformTransactionManager.commit(status);
 			} catch (Exception e) {
 				System.out.println(e);
 				redirectAttrs.addFlashAttribute("errorAddingProduct", "Your product was not updated, some errors occurred!");
-				platformTransactionManager.rollback(status);
 			}
 			
 			model.setViewName("redirect:/welcome");
@@ -131,27 +105,18 @@ public class HomeController {
 	@RequestMapping(value = "/welcome/delete", method = RequestMethod.POST)
 	public ModelAndView deleteProduct(@RequestParam("id") int id, RedirectAttributes redirectAttrs) {
 		
-		//tranzactii stuff
-		TransactionDefinition defaultTransactionDefinition = new DefaultTransactionDefinition();
-		TransactionStatus status = platformTransactionManager.getTransaction(defaultTransactionDefinition);
-		
 		ModelAndView model = new ModelAndView();
 
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		String name = authentication.getName();
-		User user = userDaoImpl.findByName(name);
-		Product product = productDaoImpl.findById(id);
-
-		java.util.Date date = getCurrentDate();
+		User user = userServiceImpl.findUserByName(name);
+		Product product = productServiceImpl.findProductById(id);
 
 		try {
-			userDaoImpl.insertLastActionDate(date, user.getIduders());
-			productDaoImpl.deleteById(product);
+			productServiceImpl.deleteProductById(product, user);
 			redirectAttrs.addFlashAttribute("successAddingProduct", "Your product was successfully deleted!");
-			platformTransactionManager.commit(status);
 		} catch (Exception e) {
 			redirectAttrs.addFlashAttribute("errorAddingProduct", "Your product was not deleted, some errors occurred!");
-			platformTransactionManager.rollback(status);
 		}
 
 		model.setViewName("redirect:/welcome");
@@ -164,8 +129,8 @@ public class HomeController {
 	@RequestMapping(value = "/welcome/addProduct", method = RequestMethod.GET)
 	public ModelAndView addProduct(Map<String, Object> m) {
 
-		List<User> users = userDaoImpl.findAll();
-		Set<Integer> userids = getUsersId(users);
+		List<User> users = userServiceImpl.findAllUsers();
+		Set<Integer> userids = userServiceImpl.getUsersIds(users);
 		ModelAndView model = new ModelAndView();
 		Product productForm = new Product();
 		m.put("productForm", productForm);
@@ -178,59 +143,40 @@ public class HomeController {
 	@RequestMapping(value = "/welcome/register", method = RequestMethod.POST)
 	public ModelAndView registerProduct(SecurityContextHolderAwareRequestWrapper request,
 			@ModelAttribute("productForm") Product product, BindingResult result, RedirectAttributes redirectAttrs) {
-		//tranzactii stuff
-		DefaultTransactionDefinition defaultTransactionDefinition = new DefaultTransactionDefinition();
-		defaultTransactionDefinition.setName("addNewProductAndDateAction");
-		TransactionStatus status = platformTransactionManager.getTransaction(defaultTransactionDefinition);
 		
 		ModelAndView model = new ModelAndView();
 
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		String name = authentication.getName();
+		User user = userServiceImpl.findUserByName(name);
+		
 		if (result.getErrorCount() > 0 || product.getPrice() < 0 || product.getIdproduct() < 0) {
 			model.setViewName("redirect:/welcome/addProduct");
 			redirectAttrs.addFlashAttribute("invalidData", "Please introduce a valid price or a valid product ID!");
 		} else {
 			
 			List<Product> products;
-			boolean exists=productIdIsUsed(product);
+			boolean exists=productServiceImpl.productIdIsUsed(product);
 			
 			if (exists)
-				//model.addObject("errorProductExists", "A product whith the same ID already exists!");
 				redirectAttrs.addFlashAttribute("errorProductExists", "A product whith the same ID already exists!");
 			else {
-				Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-				String name = authentication.getName();
-				User user = userDaoImpl.findByName(name);
-				java.util.Date date = getCurrentDate();		
 				try {
-					
-					userDaoImpl.insertLastActionDate(date, user.getIduders());
-					productDaoImpl.add(product);					
-					//productDaoImpl.addProductTransaction(product, date, user.getIduders());
-					//model.addObject("successAddingProduct", "Your product was successfully added!"); /*****/
+					productServiceImpl.addProduct(product, user);
 					redirectAttrs.addFlashAttribute("successAddingProduct", "Your product was successfully added!"); /****/
-					platformTransactionManager.commit(status);
 				} catch (Exception e) {
-					//model.addObject("errorAddingProduct", "Your product was not inserted, some errors occurred!");
 					redirectAttrs.addFlashAttribute("errorAddingProduct", "Your product was not inserted, some errors occurred!"); /***/
-					platformTransactionManager.rollback(status);
-				}
-				
+				}				
 			}
+			
 			String authorities = getAuthorities(request);
-			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-			String name = authentication.getName();
-			User user = userDaoImpl.findByName(name);
 
 			if (authorities.contains("Administrator")) {
-				products = productDaoImpl.findAll();
+				products = productServiceImpl.findAllProducts();
 			} else {
-				products = productDaoImpl.findByUserId(user.getIduders());
+				products = productServiceImpl.findProductsByUserId(user.getIduders());
 			}
 
-//			model.addObject("user", user);
-//			model.addObject("products", products);
-//			model.addObject("authorities", authorities);
-//			model.setViewName("welcome");
 			redirectAttrs.addFlashAttribute("user", user);
 			redirectAttrs.addFlashAttribute("products", products);
 			redirectAttrs.addFlashAttribute("authorities", authorities);
@@ -270,12 +216,12 @@ public class HomeController {
 		// preluare id user curent
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		String name = authentication.getName();
-		User user = userDaoImpl.findByName(name);
+		User user = userServiceImpl.findUserByName(name);
 
 		if (authorities.contains("Administrator")) {
-			products = productDaoImpl.findAll();
+			products = productServiceImpl.findAllProducts();
 		} else {
-			products = productDaoImpl.findByUserId(user.getIduders());
+			products = productServiceImpl.findProductsByUserId(user.getIduders());
 		}
 
 		model.addObject("user", user);
@@ -356,29 +302,10 @@ public class HomeController {
 		return authorities;
 	}
 
-	private Set<Integer> getUsersId(List<User> users) {		
-		Set<Integer> result=users.stream().map(User::getIduders).collect(Collectors.toSet());		
-		return result;
-	}
-
-	private boolean productIdIsUsed(Product product){
-		try{
-			productDaoImpl.findById(product.getIdproduct());
-			return true;
-		}catch(EmptyResultDataAccessException e){
-			return false;
-		}
-	}
-
-	private static java.util.Date getCurrentDate() {
-		java.util.Date date = new java.util.Date();
-		Timestamp timestamp = new Timestamp(date.getTime());
-		return timestamp;
-	}
 	
 	private boolean usernameIsValid(String username){
 		try{
-			userDaoImpl.findByName(username);
+			userServiceImpl.findUserByName(username);
 			return false;
 		} catch(EmptyResultDataAccessException e){
 			return true;

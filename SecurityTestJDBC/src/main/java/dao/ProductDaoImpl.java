@@ -4,21 +4,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
-import org.springframework.jdbc.core.JdbcTemplate;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import mapper.ProductRowMapper;
 import model.Product;
 
+@Repository(value="productDaoImpl")
 public class ProductDaoImpl implements ProductDao {
 
 	private JdbcTemplate jdbcTemplate;
-
+	
+	@Autowired
 	public void setDataSource(DataSource dataSource) {
 		jdbcTemplate = new JdbcTemplate(dataSource);		
 	}
 	
-	
+	@Transactional
 	public void add(Product product) {
 		String sql = "INSERT INTO products(idproduct, name, price, iduser) VALUES (?,?,?,?)";
 
@@ -29,6 +35,7 @@ public class ProductDaoImpl implements ProductDao {
 
 	}
 	
+	@Transactional
 	public void deleteById(Product product) {
 		String sql = "DELETE FROM products WHERE idproduct=?";
 	
@@ -36,6 +43,7 @@ public class ProductDaoImpl implements ProductDao {
 		System.out.println(rows + " row(s) deleted in Product Table.");
 	}
 	
+	@Transactional
 	public void update(Product product) {
 		String sql = "UPDATE products SET name=?, price=?, iduser=? WHERE idproduct=?";
 

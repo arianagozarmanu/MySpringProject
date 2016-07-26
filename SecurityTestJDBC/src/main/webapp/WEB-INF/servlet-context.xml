@@ -21,7 +21,7 @@
 		<beans:property name="suffix" value=".jsp" />
 	</beans:bean>
 	<!-- Package to my controller -->
-	<context:component-scan base-package="controller" />
+	<context:component-scan base-package="controller, dao, mapper, model" />
 	<context:component-scan base-package="service" />
 	
 	

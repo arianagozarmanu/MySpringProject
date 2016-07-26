@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import mapper.UserRowMapper;
 import model.User;
@@ -14,11 +17,13 @@ import model.User;
 public class UserDaoImpl implements UserDao {
 
 	private JdbcTemplate jdbcTemplate;
-
+	
+	@Autowired
 	public void setDataSource(DataSource dataSource) {
 		jdbcTemplate = new JdbcTemplate(dataSource);
 	}
-
+	
+	@Transactional
 	public void add(User user) {
 		String sql = "INSERT INTO users(idusers, username, password, enabled, email, age, lastOperationDate ) VALUES (?,?,?,?,?,?,?)";
 
@@ -32,7 +37,8 @@ public class UserDaoImpl implements UserDao {
 		System.out.println("User with id=" + user.getIduders() + " was insterted");
 
 	}
-
+	
+	@Transactional
 	public void addRole(String username, String role) {
 		String sql = "INSERT INTO user_roles(username, role ) VALUES (?,?)";
 
@@ -102,11 +108,12 @@ public class UserDaoImpl implements UserDao {
 		System.out.println(rows + " row(s) updated in User Table.");
 
 	}
-
+	
+	@Transactional
 	public void insertLastActionDate(java.util.Date date, int id) {
 		String sql = "UPDATE users SET lastOperationDate=? WHERE idusers=?";
 
-		int rows = jdbcTemplate.update(sql, new Object[] { date, id });
+		int rows = jdbcTemplate.update(sql, new Object[] {date, id });
 		System.out.println(rows + " row(s) updated with new data in User Table.");
 	}
 
