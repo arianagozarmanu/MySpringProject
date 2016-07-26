@@ -23,7 +23,6 @@ public class UserDaoImpl implements UserDao {
 		jdbcTemplate = new JdbcTemplate(dataSource);
 	}
 	
-	@Transactional
 	public void add(User user) {
 		String sql = "INSERT INTO users(idusers, username, password, enabled, email, age, lastOperationDate ) VALUES (?,?,?,?,?,?,?)";
 
@@ -38,7 +37,6 @@ public class UserDaoImpl implements UserDao {
 
 	}
 	
-	@Transactional
 	public void addRole(String username, String role) {
 		String sql = "INSERT INTO user_roles(username, role ) VALUES (?,?)";
 
@@ -109,7 +107,6 @@ public class UserDaoImpl implements UserDao {
 
 	}
 	
-	@Transactional
 	public void insertLastActionDate(java.util.Date date, int id) {
 		String sql = "UPDATE users SET lastOperationDate=? WHERE idusers=?";
 

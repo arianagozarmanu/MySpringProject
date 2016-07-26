@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import mapper.ProductRowMapper;
@@ -24,7 +25,6 @@ public class ProductDaoImpl implements ProductDao {
 		jdbcTemplate = new JdbcTemplate(dataSource);		
 	}
 	
-	@Transactional
 	public void add(Product product) {
 		String sql = "INSERT INTO products(idproduct, name, price, iduser) VALUES (?,?,?,?)";
 
@@ -34,16 +34,14 @@ public class ProductDaoImpl implements ProductDao {
 		System.out.println("Product with id=" + product.getIdproduct() + " was insterted");
 
 	}
-	
-	@Transactional
+
 	public void deleteById(Product product) {
 		String sql = "DELETE FROM products WHERE idproduct=?";
 	
 		int rows= jdbcTemplate.update(sql, new Object[] {product.getIdproduct()});
 		System.out.println(rows + " row(s) deleted in Product Table.");
 	}
-	
-	@Transactional
+
 	public void update(Product product) {
 		String sql = "UPDATE products SET name=?, price=?, iduser=? WHERE idproduct=?";
 

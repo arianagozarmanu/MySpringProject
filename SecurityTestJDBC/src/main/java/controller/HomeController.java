@@ -1,11 +1,9 @@
 package controller;
 
 import java.security.Principal;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.security.core.Authentication;
@@ -18,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import dao.*;
 import model.*;
 import service.*;
 
@@ -47,9 +44,15 @@ public class HomeController {
 		ModelAndView model = new ModelAndView();
 		
 		if(result.getErrorCount() == 0 && usernameIsValid(user.getUsername()) && emailIsValid(user.getEmail()) && user.getAge()>0){
-			userServiceImpl.registerUser(user);
-			model.addObject("successRegisterMessage", "Your username and password were successfully registered!");
-			model.setViewName("login");
+			try {
+				userServiceImpl.registerUser(user);
+				model.addObject("successRegisterMessage", "Your username and password were successfully registered!");
+				model.setViewName("login");
+			} catch(Exception e){
+				System.out.println(e);
+				redirectAttrs.addFlashAttribute("errorRegisterMessage", "Some errors ocurred accessing the database!");
+				model.setViewName("redirect:/registration");
+			}
 		} else {
 			if(!usernameIsValid(user.getUsername()))
 				redirectAttrs.addFlashAttribute("errorRegisterMessage", "This username was already taken. Please try another one!");
@@ -116,6 +119,7 @@ public class HomeController {
 			productServiceImpl.deleteProductById(product, user);
 			redirectAttrs.addFlashAttribute("successAddingProduct", "Your product was successfully deleted!");
 		} catch (Exception e) {
+			System.out.println(e);
 			redirectAttrs.addFlashAttribute("errorAddingProduct", "Your product was not deleted, some errors occurred!");
 		}
 
@@ -165,6 +169,7 @@ public class HomeController {
 					productServiceImpl.addProduct(product, user);
 					redirectAttrs.addFlashAttribute("successAddingProduct", "Your product was successfully added!"); /****/
 				} catch (Exception e) {
+					System.out.println(e);
 					redirectAttrs.addFlashAttribute("errorAddingProduct", "Your product was not inserted, some errors occurred!"); /***/
 				}				
 			}
@@ -302,7 +307,7 @@ public class HomeController {
 		return authorities;
 	}
 
-	
+	// Validari
 	private boolean usernameIsValid(String username){
 		try{
 			userServiceImpl.findUserByName(username);
