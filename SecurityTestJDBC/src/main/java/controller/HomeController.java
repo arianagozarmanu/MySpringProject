@@ -295,14 +295,13 @@ public class HomeController {
 	// aditional methods
 	// realizare string cu autoritatile user-ului
 	private String getAuthorities(SecurityContextHolderAwareRequestWrapper request) {
-		String authorities = "";
+		String authorities="";
 		if (request.isUserInRole("ROLE_ADMIN")) {
-			authorities += " Administrator ";
+			authorities = " Administrator ";
 		}
-		if (request.isUserInRole("ROLE_USER") && request.isUserInRole("ROLE_ADMIN")) {
-			authorities += "and User ";
-		} else
-			authorities += " User ";
+		if (request.isUserInRole("ROLE_USER") ) {
+			authorities = " User ";
+		}
 
 		return authorities;
 	}
